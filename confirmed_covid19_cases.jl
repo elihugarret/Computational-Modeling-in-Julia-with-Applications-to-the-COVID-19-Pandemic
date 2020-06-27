@@ -1,7 +1,14 @@
 ### A Pluto.jl notebook ###
-# v0.9.10
+# v0.9.11
 
 using Markdown
+macro bind(def, element)
+    quote
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.peek, el) ? Base.peek(el) : missing
+        el
+    end
+end
 
 # ╔═╡ 4be9e1fc-b716-11ea-1a73-afd8c1433865
 using CSV, Plots, DataFrames
@@ -26,12 +33,12 @@ rename!(data, 1 => "province", 2 => "country");
 countries = collect(data[:, 2])
 
 # ╔═╡ c08b5e18-b717-11ea-1ee9-3122ac3a7389
-function GetCountryData(country::String)::Vector
+function GetCountryData(country::String, range::Int)::Vector
     countries_row = findfirst(countries .== uppercasefirst(country))
     
     if !isnothing(countries_row)
         country_data_row = data[countries_row, :]
-        country_data = country_data_row[5:end]
+        country_data = country_data_row[5:range]
         
         return country_data
     end
@@ -40,47 +47,75 @@ function GetCountryData(country::String)::Vector
 end
 
 # ╔═╡ fb20bbc4-b71a-11ea-2547-93a05833219e
-function FormatDates()
+function FormatDates(range::Int)
     format = Dates.DateFormat("m/d/Y")
-	date_strings = names(data)[5:end]
+	date_strings = names(data)[5:range]
     formated_dates = parse.(Date, date_strings, format) .+ Year(2000)
 
     return formated_dates
 end
 
 # ╔═╡ 7faf57f6-b71b-11ea-2391-cf8db547cfe0
-begin
-	country = "canada"
-	country2 = "france"
-end
+paises = ["peru", "mexico", "chile", "brazil"]
+
+# ╔═╡ 1ce1c6ce-b80e-11ea-191e-df7e9fc04238
+@bind range html"<input type='range' min=5>"
 
 # ╔═╡ 09df210a-b71b-11ea-0c3f-d3ac3064c3d1
 begin
-	country_data = GetCountryData(country)
-	country_data2 = GetCountryData(country2)
-	dates = FormatDates()
-	typeof(dates)
+	dates = FormatDates(range)
+	paises_data = GetCountryData.(paises, range)
 end
 
 # ╔═╡ 1f559534-b71b-11ea-30a5-d3632489c22e
 begin
 	plot(
 		dates, 
-		country_data, 
+		paises_data[1], 
 		xticks=dates[1:5:end], 
 		xrotation=45, 
 		leg=:topleft, 
-		label=uppercasefirst(country), 
+		label=uppercasefirst(paises[1]), 
 		m=2
 	)
 	
-	plot!(dates, country_data2, m=2, label=uppercasefirst(country2))
-	
+	for p in 2:length(paises)
+		plot!(dates, paises_data[p], m=2, label=uppercasefirst(paises[p]))
+	end
+
 	xlabel!("Dates")
 	
 	ylabel!("Confirmed")
 	
 	title!("COVD-19: Confirmed cases")
+end
+
+# ╔═╡ fdb0fe48-b810-11ea-1541-15816e1ca410
+begin
+	@gif for i in 5:160
+		dates = FormatDates(i)
+		paises_data = GetCountryData.(paises, i)
+		
+		plot(
+			dates, 
+			paises_data[1], 
+			xticks=dates[1:5:end], 
+			xrotation=45, 
+			leg=:topleft, 
+			label=uppercasefirst(paises[1]), 
+			m=2
+		)
+
+		for p in 2:length(paises)
+			plot!(dates, paises_data[p], m=2, label=uppercasefirst(paises[p]))
+		end
+
+		xlabel!("Dates")
+
+		ylabel!("Confirmed")
+
+		title!("COVD-19: Confirmed cases")
+	end
 end
 
 # ╔═╡ Cell order:
@@ -94,5 +129,7 @@ end
 # ╠═dd5e6e68-b717-11ea-34d7-ff403c5ea379
 # ╠═fb20bbc4-b71a-11ea-2547-93a05833219e
 # ╠═7faf57f6-b71b-11ea-2391-cf8db547cfe0
+# ╠═1ce1c6ce-b80e-11ea-191e-df7e9fc04238
 # ╠═09df210a-b71b-11ea-0c3f-d3ac3064c3d1
 # ╠═1f559534-b71b-11ea-30a5-d3632489c22e
+# ╠═fdb0fe48-b810-11ea-1541-15816e1ca410
